@@ -1,0 +1,118 @@
+name: Deploy Guestbook App
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install AWS SAM CLI
+        run: |
+          pip install aws-sam-cli
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run tests
+        run: |
+          pip install pytest pytest-cov
+          pytest tests/ -v --cov=src
+
+      - name: Build SAM application
+        run: |
+          sam build
+
+      - name: Deploy to AWS
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            ENVIRONMENT="prod"
+          else
+            ENVIRONMENT="dev"
+          fi
+          
+          sam deploy \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides Environment=$ENVIRONMENT \
+            --capabilities CAPABILITY_IAM
+
+      - name: Upload frontend to S3
+        run: |
+          STACK_NAME="guestbook-app"
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" \
+            --output text)
+          
+          echo "API URL: $API_URL"
+          echo "Bucket: $BUCKET_NAME"
+          
+          # Inject API URL into frontend
+          sed "s|http://localhost:3000|$API_URL|g" frontend/app.js > /tmp/guestbook-app.js
+          
+          # Upload frontend files
+          aws s3 cp frontend/index.html "s3://$BUCKET_NAME/index.html" --content-type "text/html"
+          aws s3 cp frontend/style.css "s3://$BUCKET_NAME/style.css" --content-type "text/css"
+          aws s3 cp /tmp/guestbook-app.js "s3://$BUCKET_NAME/app.js" --content-type "application/javascript"
+
+      - name: Run smoke tests
+        run: |
+          STACK_NAME="guestbook-app"
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          
+          echo "Testing API endpoint: $API_URL"
+          
+          # Test GET /entries
+          curl -f "$API_URL/entries" || exit 1
+          
+          # Test POST /submit
+          curl -f -X POST "$API_URL/submit" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Test User","message":"CI/CD test entry"}' || exit 1
+
+      - name: Deployment summary
+        run: |
+          STACK_NAME="guestbook-app"
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          WEBSITE_URL=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='WebsiteURL'].OutputValue" \
+            --output text)
+          
+          echo "🚀 Deployment successful!"
+          echo "📍 API URL: $API_URL"
+          echo "🌐 Website URL: $WEBSITE_URL"

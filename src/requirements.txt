@@ -1,0 +1,6 @@
+# AWS SDK for Python
+boto3
+
+# Testing dependencies (for local development and CI/CD)
+pytest>=7.0.0
+pytest-cov>=4.0.0

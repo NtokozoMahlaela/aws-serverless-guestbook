@@ -1,0 +1,244 @@
+:root {
+  --aws-orange: #ff9900;
+  --aws-navy: #232f3e;
+  --aws-blue: #1e40af;
+  --aws-light: #f2f2f2;
+  --aws-gray: #8a8d91;
+  --aws-dark: #1a1a1a;
+  --surface: #ffffff;
+  --text: #232f3e;
+  --text-light: #545b64;
+  --border: #d5dbdb;
+  --success: #1d8102;
+  --error: #d13212;
+  --shadow: 0 4px 6px -1px rgba(35, 47, 62, 0.15), 0 2px 4px -1px rgba(35, 47, 62, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(135deg, var(--aws-navy) 0%, var(--aws-blue) 100%);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  color: white;
+  margin-bottom: 40px;
+  padding: 20px;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 15px;
+}
+
+header .badge {
+  display: inline-block;
+  background: var(--aws-orange);
+  color: var(--aws-navy);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+main {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+  border-top: 4px solid var(--aws-orange);
+}
+
+h2 {
+  font-size: 1.5rem;
+  color: var(--aws-navy);
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: var(--aws-light);
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--aws-orange);
+  box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.1);
+  background: var(--surface);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--aws-gray);
+}
+
+button {
+  background: var(--aws-orange);
+  color: var(--aws-navy);
+  border: none;
+  padding: 14px 32px;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(255, 153, 0, 0.2);
+}
+
+button:hover {
+  background: #e68a00;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 153, 0, 0.3);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.counter {
+  float: right;
+  font-size: 0.85rem;
+  color: var(--aws-gray);
+  font-weight: 400;
+}
+
+#status {
+  margin-top: 16px;
+  font-weight: 500;
+  min-height: 24px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.ok {
+  color: var(--success);
+  background: rgba(29, 129, 2, 0.1);
+  border-left: 4px solid var(--success);
+}
+
+.err {
+  color: var(--error);
+  background: rgba(209, 50, 18, 0.1);
+  border-left: 4px solid var(--error);
+}
+
+.entry {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s ease;
+}
+
+.entry:last-child {
+  border-bottom: none;
+}
+
+.entry:hover {
+  background: rgba(242, 242, 242, 0.5);
+  border-radius: 6px;
+  padding: 20px 12px;
+  margin: 0 -12px;
+}
+
+.entry .who {
+  font-weight: 600;
+  color: var(--aws-navy);
+  font-size: 1.05rem;
+}
+
+.entry .when {
+  font-size: 0.85rem;
+  color: var(--aws-gray);
+  margin-left: 12px;
+  font-weight: 400;
+}
+
+.entry .msg {
+  margin: 8px 0 0;
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+.empty {
+  color: var(--aws-gray);
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 1rem;
+}
+
+footer {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  padding: 20px;
+  margin-top: 40px;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+  
+  header h1 {
+    font-size: 2rem;
+  }
+  
+  .card {
+    padding: 24px;
+  }
+  
+  button {
+    width: 100%;
+  }
+}

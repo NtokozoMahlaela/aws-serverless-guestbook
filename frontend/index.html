@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Serverless Guestbook</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header Section -->
+  <header>
+    <h1>Serverless Guestbook</h1>
+    <p>Leave a message — it travels through API Gateway and Lambda into DynamoDB.</p>
+    <span class="badge">S3 · API Gateway · Lambda · DynamoDB</span>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Guestbook Form Section -->
+    <section class="card">
+      <h2>Sign the guestbook</h2>
+      <form id="guestbookForm">
+        <label for="name">Name</label>
+        <input 
+          type="text" 
+          id="name" 
+          name="name"
+          maxlength="50" 
+          required
+          placeholder="Enter your name"
+        >
+
+        <label for="message">
+          Message 
+          <span class="counter" id="counter">0/500</span>
+        </label>
+        <textarea 
+          id="message" 
+          name="message"
+          rows="4" 
+          maxlength="500" 
+          required
+          placeholder="Write your message here..."
+        ></textarea>
+
+        <button type="submit" id="submitBtn">Submit</button>
+        <div id="status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <!-- Entries Display Section -->
+    <section class="card">
+      <h2>Recent entries</h2>
+      <div id="entries">
+        <p class="empty">Loading…</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>Built as an AWS Cloud Practitioner portfolio project</footer>
+
+  <!-- Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
