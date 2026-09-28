@@ -1,6 +1,6 @@
 """
-Lambda functions for the guestbook app
-Handles entry submission and retrieval with validation and security
+Lambda functions for the Local Job Board
+Supporting South African employment and economic growth
 """
 
 import json
@@ -22,13 +22,17 @@ ENVIRONMENT = os.environ.get('ENVIRONMENT', 'dev')
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
 # Validation limits
-MAX_NAME = 50
-MAX_MESSAGE = 500
-MAX_ENTRIES = 50
+MAX_COMPANY = 100
+MAX_TITLE = 100
+MAX_LOCATION = 100
+MAX_SALARY = 50
+MAX_DESCRIPTION = 1000
+MAX_CONTACT = 200
+MAX_JOBS_RETURNED = 100
 
 # Security patterns
-NAME_PATTERN = re.compile(r'^[a-zA-Z\s\-\'\.]+$')
-MESSAGE_PATTERN = re.compile(r'^[\w\s\.\,\!\?\-\@\:]+$')
+COMPANY_PATTERN = re.compile(r'^[a-zA-Z0-9\s\-\&\'\.]+$')
+TEXT_PATTERN = re.compile(r'^[\w\s\.\,\!\?\-\@\:\/\(\)\+]+$')
 
 table = dynamodb.Table(TABLE_NAME)
 
@@ -36,7 +40,7 @@ def put_metric(metric_name, value, unit='Count'):
     """Send a metric to CloudWatch (don't fail if this breaks)"""
     try:
         cloudwatch.put_metric_data(
-            Namespace='GuestbookApp',
+            Namespace='LocalJobBoard',
             MetricData=[{
                 'MetricName': metric_name,
                 'Value': value,
@@ -59,33 +63,61 @@ def log(message, level='INFO', context=None):
         log_entry.update(context)
     print(json.dumps(log_entry))
 
-def validate_name(name):
-    """Check if name is valid"""
-    if not name or not name.strip():
-        return False, "Name is required"
+def validate_company(company):
+    """Check if company name is valid"""
+    if not company or not company.strip():
+        return False, "Company name is required"
     
-    name = name.strip()
+    company = company.strip()
     
-    if len(name) > MAX_NAME:
-        return False, f"Name must be {MAX_NAME} characters or less"
+    if len(company) > MAX_COMPANY:
+        return False, f"Company name must be {MAX_COMPANY} characters or less"
     
-    if not NAME_PATTERN.match(name):
-        return False, "Name contains invalid characters"
+    if not COMPANY_PATTERN.match(company):
+        return False, "Company name contains invalid characters"
     
     return True, None
 
-def validate_message(message):
-    """Check if message is valid"""
-    if not message or not message.strip():
-        return False, "Message is required"
+def validate_title(title):
+    """Check if job title is valid"""
+    if not title or not title.strip():
+        return False, "Job title is required"
     
-    message = message.strip()
+    title = title.strip()
     
-    if len(message) > MAX_MESSAGE:
-        return False, f"Message must be {MAX_MESSAGE} characters or less"
+    if len(title) > MAX_TITLE:
+        return False, f"Job title must be {MAX_TITLE} characters or less"
     
-    if not MESSAGE_PATTERN.match(message):
-        return False, "Message contains invalid characters"
+    return True, None
+
+def validate_description(description):
+    """Check if description is valid"""
+    if not description or not description.strip():
+        return False, "Job description is required"
+    
+    description = description.strip()
+    
+    if len(description) > MAX_DESCRIPTION:
+        return False, f"Description must be {MAX_DESCRIPTION} characters or less"
+    
+    return True, None
+
+def validate_required_fields(data):
+    """Check if all required fields are present"""
+    required = ['company', 'jobTitle', 'category', 'location', 'jobType', 'description', 'contact']
+    field_names = {
+        'company': 'Company name',
+        'jobTitle': 'Job title',
+        'category': 'Category',
+        'location': 'Location',
+        'jobType': 'Job type',
+        'description': 'Description',
+        'contact': 'Contact method'
+    }
+
+    for field in required:
+        if not data.get(field) or not data[field].strip():
+            return False, f"{field_names[field]} is required"
     
     return True, None
 
@@ -112,53 +144,73 @@ def response(status_code, body_dict):
     }
 
 def lambda_handler(event, context):
-    """POST /submit - Save a new guestbook entry"""
+    """POST /jobs - Post a new job opportunity"""
     request_id = getattr(context, 'request_id', 'unknown')
     
-    log("Submit function called", "INFO", {'request_id': request_id})
+    log("Job posting function called", "INFO", {'request_id': request_id})
     
     try:
         body = json.loads(event.get('body') or '{}')
-        name = str(body.get('name', '')).strip()
-        message = str(body.get('message', '')).strip()
         
-        # Validate inputs
-        name_valid, name_error = validate_name(name)
-        if not name_valid:
-            log(f"Name validation failed: {name_error}", "WARNING")
+        # Validate required fields
+        required_valid, required_error = validate_required_fields(body)
+        if not required_valid:
+            log(f"Required field validation failed: {required_error}", "WARNING")
             put_metric('ValidationError', 1)
-            return response(400, {'error': name_error})
+            return response(400, {'error': required_error})
         
-        message_valid, message_error = validate_message(message)
-        if not message_valid:
-            log(f"Message validation failed: {message_error}", "WARNING")
+        # Validate specific fields
+        company_valid, company_error = validate_company(body['company'])
+        if not company_valid:
+            log(f"Company validation failed: {company_error}", "WARNING")
             put_metric('ValidationError', 1)
-            return response(400, {'error': message_error})
+            return response(400, {'error': company_error})
+        
+        title_valid, title_error = validate_title(body['jobTitle'])
+        if not title_valid:
+            log(f"Title validation failed: {title_error}", "WARNING")
+            put_metric('ValidationError', 1)
+            return response(400, {'error': title_error})
+        
+        description_valid, description_error = validate_description(body['description'])
+        if not description_valid:
+            log(f"Description validation failed: {description_error}", "WARNING")
+            put_metric('ValidationError', 1)
+            return response(400, {'error': description_error})
         
         # Sanitize inputs
-        name = sanitize_input(name)
-        message = sanitize_input(message)
+        sanitized_data = {
+            'company': sanitize_input(body['company']),
+            'jobTitle': sanitize_input(body['jobTitle']),
+            'category': sanitize_input(body['category']),
+            'location': sanitize_input(body['location']),
+            'jobType': sanitize_input(body['jobType']),
+            'salary': sanitize_input(body.get('salary', '')),
+            'description': sanitize_input(body['description']),
+            'contact': sanitize_input(body['contact']),
+            'urgency': body.get('urgency', 'normal')
+        }
         
-        # Create and save entry
-        entry_id = str(uuid.uuid4())
+        # Create and save job
+        job_id = str(uuid.uuid4())
         item = {
-            'entryId': entry_id,
-            'name': name,
-            'message': message,
+            'jobId': job_id,
+            **sanitized_data,
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'environment': ENVIRONMENT
         }
         
         table.put_item(Item=item)
         
-        log("Entry saved successfully", "INFO", {'entry_id': entry_id, 'name': name})
-        put_metric('SuccessfulSubmission', 1)
+        log("Job posted successfully", "INFO", {'job_id': job_id, 'title': item['jobTitle'], 'company': item['company']})
+        put_metric('JobPosted', 1)
         
         return response(200, {
             'success': True,
-            'entry': {
-                'entryId': entry_id,
-                'name': name,
+            'job': {
+                'jobId': job_id,
+                'jobTitle': item['jobTitle'],
+                'company': item['company'],
                 'timestamp': item['timestamp']
             }
         })
@@ -179,10 +231,10 @@ def lambda_handler(event, context):
         return response(500, {'error': 'Internal server error.'})
 
 def list_handler(event, context):
-    """GET /entries - Get recent guestbook entries"""
+    """GET /jobs - Get job postings"""
     request_id = getattr(context, 'request_id', 'unknown')
     
-    log("List function called", "INFO", {'request_id': request_id})
+    log("Job listing function called", "INFO", {'request_id': request_id})
     
     try:
         items = []
@@ -193,19 +245,19 @@ def list_handler(event, context):
             response = table.scan(**scan_kwargs)
             items.extend(response.get('Items', []))
             
-            if len(items) >= MAX_ENTRIES or 'LastEvaluatedKey' not in response:
+            if len(items) >= MAX_JOBS_RETURNED or 'LastEvaluatedKey' not in response:
                 break
             
             scan_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
         
         # Sort newest first and limit
         items.sort(key=lambda i: i.get('timestamp', ''), reverse=True)
-        items = items[:MAX_ENTRIES]
+        items = items[:MAX_JOBS_RETURNED]
         
-        log(f"Retrieved {len(items)} entries", "INFO")
-        put_metric('EntriesRetrieved', len(items))
+        log(f"Retrieved {len(items)} job postings", "INFO")
+        put_metric('JobsRetrieved', len(items))
         
-        return response(200, {'entries': items})
+        return response(200, {'jobs': items})
         
     except ClientError as e:
         log(f"DynamoDB error: {str(e)}", "ERROR")

@@ -1,10 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Serverless guestbook app - S3 static frontend, API Gateway HTTP API,
-  Lambda functions, DynamoDB table. Enhanced with CloudWatch monitoring,
-  security best practices, and environment configuration.
-  AWS Cloud Practitioner portfolio project.
+  Local Job Board - Supporting South African employment and economic growth.
+  S3 static frontend, API Gateway HTTP API, Lambda functions, DynamoDB table.
 
 Globals:
   Function:
@@ -14,7 +12,7 @@ Globals:
     CodeUri: src/
     Environment:
       Variables:
-        TABLE_NAME: !Ref GuestbookTable
+        TABLE_NAME: !Ref JobsTable
         ENVIRONMENT: !Ref Environment
         LOG_LEVEL: !Ref LogLevel
     Tracing: Active
@@ -69,18 +67,16 @@ Parameters:
 
 Resources:
 
-  # ============================================
-  # DynamoDB Table
-  # ============================================
-  GuestbookTable:
+  # DynamoDB Table for job postings
+  JobsTable:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: entryId
+        - AttributeName: jobId
           AttributeType: S
       KeySchema:
-        - AttributeName: entryId
+        - AttributeName: jobId
           KeyType: HASH
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
@@ -88,13 +84,11 @@ Resources:
         PointInTimeRecoveryEnabled: true
       Tags:
         - Key: Project
-          Value: Guestbook
+          Value: LocalJobBoard
         - Key: Environment
           Value: !Ref Environment
 
-  # ============================================
   # CloudWatch Alarms
-  # ============================================
   LambdaErrorAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -109,7 +103,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: FunctionName
-          Value: !Ref SubmitFunction
+          Value: !Ref PostJobFunction
 
   DynamoDBReadCapacityAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -125,16 +119,14 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: TableName
-          Value: !Ref GuestbookTable
+          Value: !Ref JobsTable
 
-  # ============================================
   # API Gateway Usage Plan (Rate Limiting)
-  # ============================================
   UsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     Properties:
       UsagePlanName: !Sub "${AWS::StackName}-usage-plan"
-      Description: "Rate limiting for guestbook API"
+      Description: "Rate limiting for job board API"
       Throttle:
         RateLimit: !Ref RateLimit
         BurstLimit: !Ref RateLimit
@@ -142,56 +134,52 @@ Resources:
         - ApiId: !Ref ServerlessHttpApi
           Stage: !Ref HttpApiStage
 
-  # ============================================
   # Lambda Functions
-  # ============================================
-  SubmitFunction:
+  PostJobFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.lambda_handler
-      Description: "Handle guestbook entry submissions"
+      Description: "Handle job posting submissions"
       Policies:
         - DynamoDBWritePolicy:
-            TableName: !Ref GuestbookTable
+            TableName: !Ref JobsTable
         - CloudWatchPutMetricPolicy: {}
       Events:
-        SubmitEntry:
+        PostJob:
           Type: HttpApi
           Properties:
-            Path: /submit
+            Path: /jobs
             Method: post
             TimeoutInMillis: 5000
       Tags:
         Key: Function
-        Value: Submit
+        Value: PostJob
 
-  ListFunction:
+  ListJobsFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app.list_handler
-      Description: "Retrieve guestbook entries"
+      Description: "Retrieve job postings"
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref GuestbookTable
+            TableName: !Ref JobsTable
         - CloudWatchPutMetricPolicy: {}
       Events:
-        ListEntries:
+        ListJobs:
           Type: HttpApi
           Properties:
-            Path: /entries
+            Path: /jobs
             Method: get
             TimeoutInMillis: 5000
       Tags:
         Key: Function
-        Value: List
+        Value: ListJobs
 
-  # ============================================
   # S3 Static Website
-  # ============================================
   WebsiteBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "guestbook-${Environment}-${AWS::AccountId}-${AWS::Region}"
+      BucketName: !Sub "local-job-board-${Environment}-${AWS::AccountId}-${AWS::Region}"
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
@@ -204,7 +192,7 @@ Resources:
         RestrictPublicBuckets: false
       Tags:
         - Key: Project
-          Value: Guestbook
+          Value: LocalJobBoard
         - Key: Environment
           Value: !Ref Environment
 
@@ -220,13 +208,11 @@ Resources:
             Action: "s3:GetObject"
             Resource: !Sub "${WebsiteBucket.Arn}/*"
 
-  # ============================================
   # S3 Bucket for Lambda Logs
-  # ============================================
   LogBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "guestbook-logs-${Environment}-${AWS::AccountId}-${AWS::Region}"
+      BucketName: !Sub "local-job-board-logs-${Environment}-${AWS::AccountId}-${AWS::Region}"
       VersioningConfiguration:
         Status: Enabled
       LifecycleConfiguration:
@@ -237,7 +223,7 @@ Resources:
 
 Outputs:
   ApiUrl:
-    Description: "API Gateway base URL (frontend calls /submit and /entries)"
+    Description: "API Gateway base URL (frontend calls /jobs)"
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
   WebsiteURL:
     Description: "S3 static website URL"
@@ -247,7 +233,7 @@ Outputs:
     Value: !Ref WebsiteBucket
   TableName:
     Description: "DynamoDB table name"
-    Value: !Ref GuestbookTable
+    Value: !Ref JobsTable
   Environment:
     Description: "Current environment"
     Value: !Ref Environment

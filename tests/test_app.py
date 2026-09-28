@@ -1,5 +1,5 @@
 """
-Unit tests for the guestbook Lambda functions
+Unit tests for the Local Job Board Lambda functions
 """
 
 import pytest
@@ -36,42 +36,58 @@ def sample_context():
 # Input validation tests
 class TestInputValidation:
     
-    def test_valid_name(self):
-        is_valid, error = app.validate_name("John Doe")
+    def test_valid_company(self):
+        is_valid, error = app.validate_company("Tech Solutions SA")
         assert is_valid is True
         assert error is None
     
-    def test_empty_name(self):
-        is_valid, error = app.validate_name("")
+    def test_empty_company(self):
+        is_valid, error = app.validate_company("")
         assert is_valid is False
         assert "required" in error.lower()
     
-    def test_name_too_long(self):
-        long_name = "A" * 51
-        is_valid, error = app.validate_name(long_name)
+    def test_company_too_long(self):
+        long_company = "A" * 101
+        is_valid, error = app.validate_company(long_company)
         assert is_valid is False
-        assert "50" in error
+        assert "100" in error
     
-    def test_name_invalid_chars(self):
-        is_valid, error = app.validate_name("John<script>alert('xss')</script>")
+    def test_company_invalid_chars(self):
+        is_valid, error = app.validate_company("Company<script>alert('xss')</script>")
         assert is_valid is False
         assert "invalid" in error.lower()
     
-    def test_valid_message(self):
-        is_valid, error = app.validate_message("Hello, world!")
+    def test_valid_title(self):
+        is_valid, error = app.validate_title("Software Developer")
         assert is_valid is True
         assert error is None
     
-    def test_empty_message(self):
-        is_valid, error = app.validate_message("")
+    def test_empty_title(self):
+        is_valid, error = app.validate_title("")
         assert is_valid is False
         assert "required" in error.lower()
     
-    def test_message_too_long(self):
-        long_message = "A" * 501
-        is_valid, error = app.validate_message(long_message)
+    def test_title_too_long(self):
+        long_title = "A" * 101
+        is_valid, error = app.validate_title(long_title)
         assert is_valid is False
-        assert "500" in error
+        assert "100" in error
+    
+    def test_valid_description(self):
+        is_valid, error = app.validate_description("Looking for a developer to join our team...")
+        assert is_valid is True
+        assert error is None
+    
+    def test_empty_description(self):
+        is_valid, error = app.validate_description("")
+        assert is_valid is False
+        assert "required" in error.lower()
+    
+    def test_description_too_long(self):
+        long_description = "A" * 1001
+        is_valid, error = app.validate_description(long_description)
+        assert is_valid is False
+        assert "1000" in error
     
     def test_sanitize_input(self):
         malicious = "<script>alert('xss')</script>Hello"
@@ -82,11 +98,16 @@ class TestInputValidation:
 # Lambda handler tests
 class TestLambdaHandler:
     
-    def test_successful_submission(self, mock_dynamodb, mock_cloudwatch, sample_context):
+    def test_successful_job_posting(self, mock_dynamodb, mock_cloudwatch, sample_context):
         event = {
             'body': json.dumps({
-                'name': 'Test User',
-                'message': 'Test message'
+                'company': 'Tech Solutions SA',
+                'jobTitle': 'Software Developer',
+                'category': 'technology',
+                'location': 'Johannesburg',
+                'jobType': 'full-time',
+                'description': 'Looking for a developer...',
+                'contact': 'jobs@techsolutions.co.za'
             })
         }
         
@@ -95,13 +116,18 @@ class TestLambdaHandler:
         assert response['statusCode'] == 200
         body = json.loads(response['body'])
         assert body['success'] is True
-        assert 'entry' in body
+        assert 'job' in body
         mock_dynamodb.put_item.assert_called_once()
     
-    def test_missing_name(self, sample_context):
+    def test_missing_company(self, sample_context):
         event = {
             'body': json.dumps({
-                'message': 'Test message'
+                'jobTitle': 'Software Developer',
+                'category': 'technology',
+                'location': 'Johannesburg',
+                'jobType': 'full-time',
+                'description': 'Looking for a developer...',
+                'contact': 'jobs@techsolutions.co.za'
             })
         }
         
@@ -110,11 +136,17 @@ class TestLambdaHandler:
         assert response['statusCode'] == 400
         body = json.loads(response['body'])
         assert 'error' in body
+        assert 'Company name' in body['error']
     
-    def test_missing_message(self, sample_context):
+    def test_missing_title(self, sample_context):
         event = {
             'body': json.dumps({
-                'name': 'Test User'
+                'company': 'Tech Solutions SA',
+                'category': 'technology',
+                'location': 'Johannesburg',
+                'jobType': 'full-time',
+                'description': 'Looking for a developer...',
+                'contact': 'jobs@techsolutions.co.za'
             })
         }
         
@@ -123,6 +155,7 @@ class TestLambdaHandler:
         assert response['statusCode'] == 400
         body = json.loads(response['body'])
         assert 'error' in body
+        assert 'Job title' in body['error']
     
     def test_invalid_json(self, sample_context):
         event = {
@@ -135,11 +168,16 @@ class TestLambdaHandler:
         body = json.loads(response['body'])
         assert 'Invalid JSON' in body['error']
     
-    def test_name_too_long(self, sample_context):
+    def test_company_too_long(self, sample_context):
         event = {
             'body': json.dumps({
-                'name': 'A' * 51,
-                'message': 'Test message'
+                'company': 'A' * 101,
+                'jobTitle': 'Software Developer',
+                'category': 'technology',
+                'location': 'Johannesburg',
+                'jobType': 'full-time',
+                'description': 'Looking for a developer...',
+                'contact': 'jobs@techsolutions.co.za'
             })
         }
         
@@ -147,7 +185,7 @@ class TestLambdaHandler:
         
         assert response['statusCode'] == 400
         body = json.loads(response['body'])
-        assert '50' in body['error']
+        assert '100' in body['error']
 
 class TestListHandler:
     
@@ -155,9 +193,14 @@ class TestListHandler:
         mock_dynamodb.scan.return_value = {
             'Items': [
                 {
-                    'entryId': '1',
-                    'name': 'User 1',
-                    'message': 'Message 1',
+                    'jobId': '1',
+                    'company': 'Tech Solutions SA',
+                    'jobTitle': 'Software Developer',
+                    'category': 'technology',
+                    'location': 'Johannesburg',
+                    'jobType': 'full-time',
+                    'description': 'Looking for a developer...',
+                    'contact': 'jobs@techsolutions.co.za',
                     'timestamp': '2024-01-01T00:00:00Z'
                 }
             ]
@@ -168,8 +211,8 @@ class TestListHandler:
         
         assert response['statusCode'] == 200
         body = json.loads(response['body'])
-        assert 'entries' in body
-        assert len(body['entries']) == 1
+        assert 'jobs' in body
+        assert len(body['jobs']) == 1
         mock_dynamodb.scan.assert_called_once()
     
     def test_empty_list(self, mock_dynamodb, sample_context):
@@ -182,7 +225,7 @@ class TestListHandler:
         
         assert response['statusCode'] == 200
         body = json.loads(response['body'])
-        assert body['entries'] == []
+        assert body['jobs'] == []
 
 class TestResponseHelper:
     
@@ -203,17 +246,17 @@ class TestResponseHelper:
 class TestCloudWatchMetrics:
     
     def test_put_metric_success(self, mock_cloudwatch):
-        app.put_metric('TestMetric', 1)
+        app.put_metric('JobPosted', 1)
         
         mock_cloudwatch.put_metric_data.assert_called_once()
         call_args = mock_cloudwatch.put_metric_data.call_args
-        assert call_args[1]['MetricData'][0]['MetricName'] == 'TestMetric'
+        assert call_args[1]['MetricData'][0]['MetricName'] == 'JobPosted'
     
     def test_put_metric_failure_handling(self, mock_cloudwatch):
         mock_cloudwatch.put_metric_data.side_effect = Exception("CloudWatch error")
         
         # Should not raise exception
-        app.put_metric('TestMetric', 1)
+        app.put_metric('JobPosted', 1)
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

@@ -3,64 +3,283 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Serverless Guestbook</title>
+  <title>Local Job Board - Find Your Next Opportunity</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Header Section -->
   <header>
-    <h1>Serverless Guestbook</h1>
-    <p>Leave a message — it travels through API Gateway and Lambda into DynamoDB.</p>
-    <span class="badge">S3 · API Gateway · Lambda · DynamoDB</span>
+    <div class="header-content">
+      <div class="logo">
+        <h1>Local Job Board</h1>
+        <p class="tagline">Connecting Talent with Opportunity</p>
+      </div>
+      <div class="header-stats">
+        <div class="header-stat">
+          <span class="stat-number" id="headerJobCount">0</span>
+          <span class="stat-label">Active Jobs</span>
+        </div>
+        <div class="header-stat">
+          <span class="stat-number" id="headerCompanyCount">0</span>
+          <span class="stat-label">Companies</span>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <!-- Main Content -->
   <main>
-    <!-- Guestbook Form Section -->
-    <section class="card">
-      <h2>Sign the guestbook</h2>
-      <form id="guestbookForm">
-        <label for="name">Name</label>
-        <input 
-          type="text" 
-          id="name" 
-          name="name"
-          maxlength="50" 
-          required
-          placeholder="Enter your name"
-        >
-
-        <label for="message">
-          Message 
-          <span class="counter" id="counter">0/500</span>
-        </label>
-        <textarea 
-          id="message" 
-          name="message"
-          rows="4" 
-          maxlength="500" 
-          required
-          placeholder="Write your message here..."
-        ></textarea>
-
-        <button type="submit" id="submitBtn">Submit</button>
-        <div id="status" role="status" aria-live="polite"></div>
-      </form>
+    <!-- Hero Search Section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <h2>Find Your Dream Job Today</h2>
+        <p class="hero-subtitle">Discover opportunities from local businesses and major employers across South Africa</p>
+        
+        <div class="quick-search">
+          <input type="text" id="quickSearch" placeholder="Job title, keywords, or company">
+          <input type="text" id="quickLocation" placeholder="City or province">
+          <button type="button" id="quickSearchBtn">Search Jobs</button>
+        </div>
+        
+        <div class="popular-searches">
+          <span class="popular-label">Popular searches:</span>
+          <a href="#" class="popular-tag">Software Developer</a>
+          <a href="#" class="popular-tag">Sales Representative</a>
+          <a href="#" class="popular-tag">Nurse</a>
+          <a href="#" class="popular-tag">Teacher</a>
+          <a href="#" class="popular-tag">Electrician</a>
+        </div>
+      </div>
     </section>
 
-    <!-- Entries Display Section -->
+    <!-- Job Source Toggle -->
     <section class="card">
-      <h2>Recent entries</h2>
-      <div id="entries">
-        <p class="empty">Loading…</p>
+      <h2>Job Sources</h2>
+      <div class="source-toggle" id="sourceToggle">
+        <button type="button" id="localBtn" class="source-btn">Local Jobs</button>
+        <button type="button" id="apiBtn" class="source-btn">External Jobs</button>
+        <button type="button" id="allBtn" class="source-btn active">All Jobs</button>
+      </div>
+      <p class="source-info">
+        <strong>Local Jobs:</strong> Posted directly by South African businesses on this platform<br>
+        <strong>External Jobs:</strong> Curated opportunities from major job boards and company websites
+      </p>
+    </section>
+
+    <!-- Advanced Filters -->
+    <section class="card">
+      <h2>Filter Opportunities</h2>
+      <div class="filters">
+        <div class="filter-group">
+          <label for="filterCategory">Industry</label>
+          <select id="filterCategory">
+            <option value="">All Industries</option>
+            <option value="retail">Retail & Sales</option>
+            <option value="technology">Technology & IT</option>
+            <option value="healthcare">Healthcare & Medical</option>
+            <option value="education">Education & Training</option>
+            <option value="hospitality">Hospitality & Tourism</option>
+            <option value="construction">Construction & Trades</option>
+            <option value="admin">Admin & Office</option>
+            <option value="agriculture">Agriculture & Farming</option>
+            <option value="transport">Transport & Logistics</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterLocation">Location</label>
+          <input type="text" id="filterLocation" placeholder="City or province">
+        </div>
+        <div class="filter-group">
+          <label for="filterJobType">Employment Type</label>
+          <select id="filterJobType">
+            <option value="">All Types</option>
+            <option value="full-time">Full-time</option>
+            <option value="part-time">Part-time</option>
+            <option value="contract">Contract/Temporary</option>
+            <option value="internship">Internship/Trainee</option>
+            <option value="freelance">Freelance/Gig</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterSalary">Salary Range</label>
+          <select id="filterSalary">
+            <option value="">Any Salary</option>
+            <option value="0-10000">Under R10,000</option>
+            <option value="10000-20000">R10,000 - R20,000</option>
+            <option value="20000-30000">R20,000 - R30,000</option>
+            <option value="30000-50000">R30,000 - R50,000</option>
+            <option value="50000+">R50,000+</option>
+          </select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button type="button" id="filterBtn" class="filter-btn">Apply Filters</button>
+        <button type="button" id="clearFiltersBtn" class="filter-btn secondary">Clear All</button>
+      </div>
+    </section>
+
+    <!-- Job Listings -->
+    <section class="card">
+      <div class="listings-header">
+        <h2>Available Positions</h2>
+        <div class="results-count">
+          <span id="resultsCount">0</span> jobs found
+        </div>
+      </div>
+      <div id="jobs"><p class="empty">Loading job opportunities...</p></div>
+    </section>
+
+    <!-- For Employers Section -->
+    <section class="card employer-section">
+      <h2>For Employers</h2>
+      <div class="employer-content">
+        <div class="employer-info">
+          <h3>Post Your Job Openings</h3>
+          <p>Reach thousands of qualified job seekers across South Africa. Our platform connects local businesses with talented professionals.</p>
+          <ul class="employer-benefits">
+            <li>Free job posting for local businesses</li>
+            <li>Targeted reach to South African job seekers</li>
+            <li>Easy application management</li>
+            <li>Direct candidate communication</li>
+          </ul>
+        </div>
+        <div class="employer-form">
+          <form id="jobForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="company">Company Name *</label>
+                <input type="text" id="company" name="company" maxlength="100" required placeholder="Your company name">
+              </div>
+              <div class="form-group">
+                <label for="jobTitle">Job Title *</label>
+                <input type="text" id="jobTitle" name="jobTitle" maxlength="100" required placeholder="Position title">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="category">Industry *</label>
+                <select id="category" name="category" required>
+                  <option value="">Select industry...</option>
+                  <option value="retail">Retail & Sales</option>
+                  <option value="technology">Technology & IT</option>
+                  <option value="healthcare">Healthcare & Medical</option>
+                  <option value="education">Education & Training</option>
+                  <option value="hospitality">Hospitality & Tourism</option>
+                  <option value="construction">Construction & Trades</option>
+                  <option value="admin">Admin & Office</option>
+                  <option value="agriculture">Agriculture & Farming</option>
+                  <option value="transport">Transport & Logistics</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="location">Location *</label>
+                <input type="text" id="location" name="location" maxlength="100" required placeholder="City, province">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="jobType">Employment Type *</label>
+                <select id="jobType" name="jobType" required>
+                  <option value="">Select type...</option>
+                  <option value="full-time">Full-time</option>
+                  <option value="part-time">Part-time</option>
+                  <option value="contract">Contract/Temporary</option>
+                  <option value="internship">Internship/Trainee</option>
+                  <option value="freelance">Freelance/Gig</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="salary">Salary Range</label>
+                <input type="text" id="salary" name="salary" maxlength="50" placeholder="e.g., R15,000 - R20,000/month">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="description">Job Description * <span class="counter" id="counter">0/1000</span></label>
+              <textarea id="description" name="description" rows="6" maxlength="1000" required placeholder="Describe the role, responsibilities, requirements, and benefits..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="contact">Contact Method *</label>
+                <input type="text" id="contact" name="contact" maxlength="200" required placeholder="Email or phone for applications">
+              </div>
+              <div class="form-group">
+                <label for="urgency">Urgency Level</label>
+                <select id="urgency" name="urgency">
+                  <option value="normal">Normal (Within 30 days)</option>
+                  <option value="urgent">Urgent (Within 7 days)</option>
+                  <option value="immediate">Immediate (ASAP)</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" id="submitBtn">Post Job</button>
+            <div id="status" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="card stats">
+      <h2>Platform Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-number" id="totalJobs">0</div>
+          <div class="stat-label">Active Jobs</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="totalCompanies">0</div>
+          <div class="stat-label">Companies</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="totalCategories">0</div>
+          <div class="stat-label">Industries</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">24/7</div>
+          <div class="stat-label">Availability</div>
+        </div>
       </div>
     </section>
   </main>
 
-  <!-- Footer -->
-  <footer>Built as an AWS Cloud Practitioner portfolio project</footer>
+  <footer>
+    <div class="footer-content">
+      <div class="footer-section">
+        <h3>Local Job Board</h3>
+        <p>Connecting South African talent with opportunity since 2024</p>
+      </div>
+      <div class="footer-section">
+        <h3>For Job Seekers</h3>
+        <ul>
+          <li><a href="#">Browse Jobs</a></li>
+          <li><a href="#">Career Resources</a></li>
+          <li><a href="#">Salary Guide</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3>For Employers</h3>
+        <ul>
+          <li><a href="#">Post a Job</a></li>
+          <li><a href="#">Pricing</a></li>
+          <li><a href="#">Employer Resources</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3>Contact</h3>
+        <p>Email: info@localjobboard.co.za</p>
+        <p>Phone: +27 11 123 4567</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Local Job Board. All rights reserved. Supporting South African employment.</p>
+    </div>
+  </footer>
 
-  <!-- Application Script -->
   <script src="app.js"></script>
 </body>
 </html>
